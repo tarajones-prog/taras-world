@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mark Spain Real Estate — Performance Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --od-green:       #00a550;
+      --od-green-dark:  #007a3d;
+      --od-green-mid:   #00c060;
+      --od-green-light: #e8f5ee;
+      --od-green-pale:  #f2faf6;
+      --bg:        #f5f6f8;
+      --surface:   #ffffff;
+      --surface-2: #f9fafb;
+      --border:    #e5e7eb;
+      --border-2:  #d1d5db;
+      --text-1: #111827;
+      --text-2: #4b5563;
+      --text-3: #9ca3af;
+      --blue:   #2563eb;
+      --blue-l: #eff6ff;
+      --amber:  #d97706;
+      --amber-l:#fffbeb;
+      --purple: #7c3aed;
+      --purple-l:#f5f3ff;
+      --teal:   #0d9488;
+      --teal-l: #f0fdfa;
+      --red:    #dc2626;
+      --red-l:  #fef2f2;
+      --chip-radius: 20px;
+      --radius: 10px;
+      --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text-1); min-height: 100vh; font-size: 14px; }
+    .header { background: var(--od-green-dark); padding: 0 32px; height: 60px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+    .header-left { display: flex; align-items: center; gap: 16px; }
+    .logo-badge { background: #fff; color: var(--od-green-dark); font-weight: 900; font-size: 16px; padding: 5px 11px; border-radius: 6px; letter-spacing: -0.5px; }
+    .header-title h1 { font-size: 16px; font-weight: 700; color: #fff; line-height: 1.2; }
+    .header-title p { font-size: 12px; color: rgba(255,255,255,0.65); margin-top: 1px; }
+    .header-right { display: flex; align-items: center; gap: 10px; }
+    .last-updated { font-size: 12px; color: rgba(255,255,255,0.7); background: rgba(255,255,255,0.12); padding: 5px 12px; border-radius: var(--chip-radius); }
+    .refresh-btn { background: rgba(255,255,255,0.18); color: #fff; border: 1px solid rgba(255,255,255,0.25); padding: 6px 14px; border-radius: var(--chip-radius); font-size: 12px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+    .refresh-btn:hover { background: rgba(255,255,255,0.28); }
+    .summary-strip { display: grid; grid-template-columns: repeat(6, 1fr); background: var(--surface); border-bottom: 1px solid var(--border); box-shadow: var(--shadow); }
+    .strip-item { padding: 14px 18px; border-right: 1px solid var(--border); text-align: center; }
+    .strip-item:last-child { border-right: none; }
+    .strip-item .val { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; }
+    .strip-item .lbl { font-size: 10px; color: var(--text-2); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+    .strip-item .delta { font-size: 11px; margin-top: 4px; font-weight: 600; }
+    .delta.up { color: var(--od-green); } .delta.down { color: var(--red); }
+    .tab-bar { background: var(--surface); border-bottom: 2px solid var(--border); padding: 0 32px; display: flex; }
+    .tab { padding: 14px 22px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; background: transparent; color: var(--text-2); border-bottom: 3px solid transparent; margin-bottom: -2px; transition: all 0.18s; display: flex; align-items: center; gap: 7px; white-space: nowrap; }
+    .tab:hover { color: var(--text-1); }
+    .tab.active { color: var(--od-green-dark); border-bottom-color: var(--od-green); font-weight: 700; }
+    .tab-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .content { padding: 24px 32px 48px; max-width: 1600px; }
+    .tab-panel { display: none; } .tab-panel.active { display: block; }
+    .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+    .section-title { font-size: 16px; font-weight: 700; color: var(--text-1); display: flex; align-items: center; gap: 10px; }
+    .section-badge { font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: var(--chip-radius); letter-spacing: 0.5px; text-transform: uppercase; }
+    .notes-box { background: #fffbeb; border: 1px solid #fde68a; border-left: 4px solid var(--amber); border-radius: var(--radius); padding: 12px 16px; font-size: 13px; color: #78350f; margin-bottom: 20px; line-height: 1.5; }
+    .notes-box strong { color: var(--amber); } .notes-box code { background: rgba(0,0,0,0.06); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+    .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
+    .kpi-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; box-shadow: var(--shadow); position: relative; overflow: hidden; }
+    .kpi-card::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; }
+    .kpi-card.green::before { background: var(--od-green); } .kpi-card.blue::before { background: var(--blue); } .kpi-card.amber::before { background: var(--amber); } .kpi-card.purple::before { background: var(--purple); } .kpi-card.teal::before { background: var(--teal); }
+    .kpi-label { font-size: 11px; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; margin-bottom: 6px; }
+    .kpi-value { font-size: 30px; font-weight: 800; letter-spacing: -1px; color: var(--text-1); }
+    .kpi-sub { font-size: 12px; color: var(--text-3); margin-top: 4px; } .kpi-change { font-size: 11px; margin-top: 4px; font-weight: 600; }
+    .funnel-container { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px 24px; margin-bottom: 20px; box-shadow: var(--shadow); }
+    .funnel-title { font-size: 11px; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 16px; }
+    .funnel-steps { display: flex; align-items: stretch; }
+    .funnel-step { flex: 1; }
+    .funnel-step-inner { background: var(--od-green-pale); border: 1px solid var(--od-green-light); border-radius: 8px; padding: 14px 10px; text-align: center; margin: 0 2px; transition: box-shadow 0.18s; }
+    .funnel-step-inner:hover { box-shadow: 0 2px 8px rgba(0,165,80,0.15); }
+    .funnel-num { font-size: 26px; font-weight: 800; color: var(--od-green-dark); }
+    .funnel-label { font-size: 10px; color: var(--text-2); margin-top: 4px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
+    .funnel-pct { font-size: 11px; color: var(--od-green); margin-top: 3px; font-weight: 700; }
+    .funnel-arrow { color: var(--border-2); font-size: 20px; display: flex; align-items: center; padding: 0 1px; flex-shrink: 0; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+    .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+    .chart-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; box-shadow: var(--shadow); }
+    .chart-box-title { font-size: 11px; font-weight: 700; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 14px; }
+    .chart-box canvas { max-height: 220px; }
+    .table-box { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 20px; box-shadow: var(--shadow); }
+    .table-header { padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); background: var(--surface-2); }
+    .table-title { font-size: 13px; font-weight: 700; color: var(--text-1); }
+    .table-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+    .filter-chip { font-size: 11px; padding: 4px 11px; border-radius: var(--chip-radius); border: 1px solid var(--border); background: var(--surface); color: var(--text-2); cursor: pointer; font-weight: 600; transition: all 0.15s; }
+    .filter-chip:hover { border-color: var(--od-green); color: var(--od-green); }
+    .filter-chip.active { background: var(--od-green-light); border-color: var(--od-green); color: var(--od-green-dark); }
+    table { width: 100%; border-collapse: collapse; }
+    th { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-2); padding: 9px 14px; text-align: left; background: var(--surface-2); border-bottom: 1px solid var(--border); white-space: nowrap; }
+    td { font-size: 13px; padding: 11px 14px; border-bottom: 1px solid #f3f4f6; vertical-align: middle; color: var(--text-1); }
+    tr:last-child td { border-bottom: none; } tr:hover td { background: var(--od-green-pale); }
+    .addr { font-weight: 600; }
+    .table-scroll { max-height: 400px; overflow-y: auto; }
+    .market-chip { display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: var(--chip-radius); letter-spacing: 0.3px; text-transform: uppercase; }
+    .m-atl{background:#eff6ff;color:#1d4ed8;} .m-nas{background:#f0fdf4;color:#15803d;} .m-ral{background:#faf5ff;color:#6d28d9;} .m-orl{background:#fffbeb;color:#b45309;} .m-clt{background:#f0fdfa;color:#0f766e;} .m-grb{background:#fff1f2;color:#be123c;}
+    .status { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: var(--chip-radius); text-transform: uppercase; letter-spacing: 0.3px; white-space: nowrap; }
+    .status-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .s-contract{background:#eff6ff;color:#1d4ed8;} .s-contract .status-dot{background:#2563eb;}
+    .s-pending{background:#fffbeb;color:#b45309;} .s-pending .status-dot{background:#d97706;}
+    .s-closed{background:#f0fdf4;color:#15803d;} .s-closed .status-dot{background:#16a34a;}
+    .s-assessment{background:#f0fdfa;color:#0f766e;} .s-assessment .status-dot{background:#0d9488;}
+    .s-listed{background:#eff6ff;color:#1d4ed8;} .s-listed .status-dot{background:#3b82f6;}
+    .s-walked{background:#fff1f2;color:#be123c;} .s-walked .status-dot{background:#dc2626;}
+    .type-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:var(--chip-radius);text-transform:uppercase;letter-spacing:0.3px;}
+    .type-cash{background:#f0fdf4;color:#15803d;} .type-cp{background:#eff6ff;color:#1d4ed8;} .type-alo{background:#faf5ff;color:#6d28d9;} .type-ext{background:#fffbeb;color:#b45309;}
+    .conv-bar-wrap{margin-bottom:11px;} .conv-bar-header{display:flex;justify-content:space-between;margin-bottom:5px;font-size:12px;}
+    .conv-bar-label{color:var(--text-2);font-weight:500;} .conv-bar-val{font-weight:700;color:var(--text-1);}
+    .conv-bar-bg{height:7px;background:#f3f4f6;border-radius:4px;overflow:hidden;}
+    .conv-bar-fill{height:100%;border-radius:4px;transition:width 1s ease;}
+    .comm{font-weight:700;color:var(--od-green-dark);} .comm-pending{font-weight:700;color:var(--amber);}
+    a.city-link{color:var(--blue);text-decoration:none;font-size:12px;font-weight:600;}
+    @media(max-width:1200px){.kpi-grid{grid-template-columns:repeat(2,1fr);}.summary-strip{grid-template-columns:repeat(3,1fr);}}
+    @media(max-width:800px){.two-col,.three-col{grid-template-columns:1fr;}.content{padding:16px;}.funnel-steps{flex-wrap:wrap;}.tab-bar{overflow-x:auto;}}
+  </style>
+</head>
+<body>
+<div class="header">
+  <div class="header-left">
+    <div class="logo-badge">OD</div>
+    <div class="header-title">
+      <h1>Mark Spain Real Estate — Partnership Dashboard</h1>
+      <p>External Listings · Acquisitions (Cash + Cash Plus) · Agent Led Offers</p>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="last-updated">Updated: <span id="lastUpdated"></span></div>
+    <button class="refresh-btn" onclick="location.reload()">↻ Refresh</button>
+  </div>
+</div>
+<div class="summary-strip">
+  <div class="strip-item"><div class="val" style="color:var(--blue)">12</div><div class="lbl">Active Ext. Listings</div><div class="delta up">↑ 3 vs last mo</div></div>
+  <div class="strip-item"><div class="val" style="color:var(--od-green)">18</div><div class="lbl">Cash In Contract</div><div class="delta up">↑ 5 vs last mo</div></div>
+  <div class="strip-item"><div class="val" style="color:var(--blue)">7</div><div class="lbl">Cash Plus In Contract</div><div class="delta up">↑ 2 vs last mo</div></div>
+  <div class="strip-item"><div class="val" style="color:var(--purple)">34</div><div class="lbl">ALO Leads (MTD)</div><div class="delta up">↑ 8 vs last mo</div></div>
+  <div class="strip-item"><div class="val" style="color:var(--amber)">41%</div><div class="lbl">ALO Lead → Contract</div><div class="delta up">↑ 6pts</div></div>
+  <div class="strip-item"><div class="val" style="color:var(--od-green-dark)">$2.1M</div><div class="lbl">Total Volume (MTD)</div><div class="delta up">↑ 18%</div></div>
+</div>
+<div class="tab-bar">
+  <button class="tab active" onclick="switchTab('ext',this)"><span class="tab-dot" style="background:var(--blue)"></span>External Listings (ELA)</button>
+  <button class="tab" onclick="switchTab('acq',this)"><span class="tab-dot" style="background:var(--od-green)"></span>Acquisitions — Cash &amp; Cash Plus</button>
+  <button class="tab" onclick="switchTab('alo',this)"><span class="tab-dot" style="background:var(--purple)"></span>Agent Led Offers (ALO)</button>
+</div>
+<div class="content">
+<div class="tab-panel active" id="panel-ext">
+  <div class="section-header"><div class="section-title"><span class="tab-dot" style="background:var(--blue);width:12px;height:12px;border-radius:50%;display:inline-block;"></span>External Listings — MSRE as ELA<span class="section-badge" style="background:var(--blue-l);color:var(--blue);">ELA Program</span></div></div>
+  <div class="notes-box"><strong>How it works:</strong> MSRE agents are assigned as External Listing Agents (ELA) on Opendoor resale properties — list on MLS, facilitate showings, negotiate offers. Also serve as ELA on Cash Plus resale. Key metric: <strong>Days to Pending</strong> (target &lt;21 days). Access via <code>opendoor-external-admins@markspain.com</code>.</div>
+  <div class="kpi-grid">
+    <div class="kpi-card blue"><div class="kpi-label">Active Listings</div><div class="kpi-value" style="color:var(--blue)">12</div><div class="kpi-sub">Across 6 markets</div></div>
+    <div class="kpi-card amber"><div class="kpi-label">Avg Days to Pending</div><div class="kpi-value" style="color:var(--amber)">18</div><div class="kpi-sub">Target: &lt;21 days</div><div class="kpi-change" style="color:var(--od-green)">↓ 3 days vs last mo</div></div>
+    <div class="kpi-card green"><div class="kpi-label">Pending</div><div class="kpi-value" style="color:var(--od-green)">5</div><div class="kpi-sub">Awaiting close</div></div>
+    <div class="kpi-card purple"><div class="kpi-label">Closed MTD</div><div class="kpi-value" style="color:var(--purple)">9</div><div class="kpi-sub">March 2026</div><div class="kpi-change" style="color:var(--od-green)">↑ 3 vs Feb</div></div>
+  </div>
+  <div class="funnel-container"><div class="funnel-title">Listing Pipeline — YTD</div><div class="funnel-steps">
+    <div class="funnel-step"><div class="funnel-step-inner"><div class="funnel-num">26</div><div class="funnel-label">Assigned</div><div class="funnel-pct">YTD</div></div></div><div class="funnel-arrow">›</div>
+    <div class="funnel-step"><div class="funnel-step-inner"><div class="funnel-num">12</div><div class="funnel-label">Active/Listed</div><div class="funnel-pct">46%</div></div></div><div class="funnel-arrow">›</div>
+    <div class="funnel-step"><div class="funnel-step-inner"><div class="funnel-num">5</div><div class="funnel-label">Pending</div><div class="funnel-pct">19%</div></div></div><div class="funnel-arrow">›</div>
+    <div class="funnel-step"><div class="funnel-step-inner"><div class="funnel-num">9</div><div class="funnel-label">Closed</div><div class="funnel-pct">35%</div></div></div>
+  </div></div>
+  <div class="two-col">
+    <div class="chart-box"><div class="chart-box-title">Active Listings by Market</div><canvas id="extMarketChart"></canvas></div>
+    <div class="chart-box"><div class="chart-box-title">Avg Days to Pending by Market</div><canvas id="extDtpChart"></canvas></div>
+  </div>
+  <div class="table-box"><div class="table-header"><div class="table-title">Active &amp; Recent Listings</div><div class="table-actions"><button class="filter-chip active">All</button><button class="filter-chip">Active</button><button class="filter-chip">Pending</button><button class="filter-chip">Closed</button></div></div>
+  <div class="table-scroll"><table><thead><tr><th>Address</th><th>Market</th><th>Listed</th><th>DOM</th><th>List Price</th><th>Status</th><th>Notes</th></tr></thead><tbody>
+    <tr><td class="addr">1922 Odessa Ave</td><td><span class="market-chip m-nas">Nashville</span></td><td>Jan 15</td><td>11</td><td>$389,000</td><td><span class="status s-pending"><span class="status-dot"></span>Pending</span></td><td>Accepted 3/10</td></tr>
+    <tr><td class="addr">5734 Laborde Ave</td><td><span class="market-chip m-clt">Charlotte</span></td><td>Feb 1</td><td>21</td><td>$435,000</td><td><span class="status s-listed"><span class="status-dot"></span>Active</span></td><td>Price drop 2/20</td></tr>
+    <tr><td class="addr">3318 Glenrose Trl</td><td><span class="market-chip m-atl">Atlanta</span></td><td>Jan 28</td><td>8</td><td>$520,000</td><td><span class="status s-pending"><span class="status-dot"></span>Pending</span></td><td>CP resale — ELA</td></tr>
+    <tr><td class="addr">245 Ledina Ct</td><td><span class="market-chip m-nas">Nashville</span></td><td>Dec 10</td><td>—</td><td>$312,000</td><td><span class="status s-closed"><span class="status-dot"></span>Closed</span></td><td>COE 2/14/26</td></tr>
+    <tr><td class="addr">113 Copper Leaf Rd</td><td><span class="market-chip m-nas">Nashville</span></td><td>Feb 8</td><td>18</td><td>$297,500</td><td><span class="status s-listed"><span class="status-dot"></span>Active</span></td><td></td></tr>
+    <tr><td class="addr">16110 Aryshire Green Ct</td><td><span class="market-chip m-clt">Charlotte</span></td><td>Feb 3</td><td>14</td><td>$468,000</td><td><span class="status s-listed"><span class="status-dot"></span>Active</span></td><td></td></tr>
+    <tr><td class="addr">3228 Kensington Pl</td><td><span class="market-chip m-grb">Greensboro</span></td><td>Jan 20</td><td>—</td><td>$285,000</td><td><span class="status s-closed"><span class="status-dot"></span>Closed</span></td><td>COE 3/1/26</td></tr>
+    <tr><td class="addr">844 Jett Drive</td><td><span class="market-chip m-nas">Nashville</span></td><td>Nov 20</td><td>—</td><td>$354,000</td><td><span class="status s-closed"><span class="status-dot"></span>Closed</span></td><td>Comm. resolved</td></tr>
+  </tbody></table></div></div>
+  <div class="chart-box"><div class="chart-box-title">Days to Pending Trend (Last 6 Months)</div><canvas id="extDtpTrendChart" style="max-height:180px"></canvas></div>
+</div>
+<div class="tab-panel" id="panel-acq">
+  <div class="section-header"><div class="section-title"><span class="tab-dot" style="background:var(--od-green);width:12px;height:12px;border-radius:50%;display:inline-block;"></span>Acquisitions — Cash &amp; Cash Plus<span class="section-badge" style="background:var(--od-green-light);color:var(--od-green-dark);">MSRE Sell Direct</span></div></div>
+  <div class="notes-box"><strong>Cash:</strong> MSRE → handoff to <code>go@markspain.com</code> in CITY → 3.5%+$695. <strong>Cash Plus:</strong> Upfront cash + upside on relist. MSRE earns 3.5%+$695+0.5% referral (if eligible — not if listed within 30d under MSRE brokerage). MSRE assigned as ELA on resale.</div>
+  <div class="kpi-grid">
+    <div class="kpi-card green"><div class="kpi-label">Total In Contract</div><div class="kpi-value" style="color:var(--od-green)">25</div><div class="kpi-sub">Cash (18) + CP (7)</div></div>
+    <div class="kpi-card blue"><div class="kpi-label">DV Complete</div><div class="kpi-value" style="color:var(--blue)">11</div><div class="kpi-sub">Pre-close</div></div>
+    <div class="kpi-card amber"><div class="kpi-label">Offers Out</div><div class="kpi-value" style="color:var(--amber)">14</div><div class="kpi-sub">Awaiting acceptance</div></div>
+    <div class="kpi-card purple"><div class="kpi-label">Closed MTD</div><div class="kpi-value" style="color:var(--purple)">8</div><div class="kpi-sub">March 2026 · $2.1M</div></div>
+  </div>
+  <div class="funnel-container"><div class="funnel-title">Acquisition Pipeline — MTD</div><div class="funnel-steps">
+    <div class="funnel-step"><div class="funnel-step-inner"><div class="funnel-num">38</div><div class="funnel-label">Offer Requested</div><div class="funnel-pct">MTD</div></div></div><div class="funnel-arrow">›</div>
+    <div class="funnel-step"><div class="funnel-step-inner"><div class="funnel-num">29</div><div class="funnel-label">Assessment</div><div class="funnel-pct">76%</div></div></div><div class="funnel-arrow">›</div>
+    <div class="funnel-step"><div class="funnel-step-inner"><div class="funnel-num">14</div><div class="funnel-label">Final Offer</div><div class="funnel-pct">48%</div></div></div><div class="funnel-arrow">›</div>
+    <div class="funnel-step"><div class="funnel-step-inner"><div class="funnel-num">25</div><div class="funnel-label">In Contract</div><div class="funnel-pct">66%</div></div></div><div class="funnel-arrow">›</div>
+    <div class="funnel-step"><div class="funnel-step-inner"><div class="funnel-num">11</div><div class="funnel-label">DV Complete</div><div class="funnel-pct">44%</div></div></div><div class="funnel-arrow">›</div>
+    <div class="funnel-step"><div class="funnel-step-inner"><div class="funnel-num">8</div><div class="funnel-label">Closed</div><div class="funnel-pct">32%</div></div></div>
+  </div></div>
+  <div class="three-col">
+    <div class="chart-box"><div class="chart-box-title">Cash vs Cash Plus Mix</div><canvas id="acqMixChart"></canvas></div>
+    <div class="chart-box"><div class="chart-box-title">In-Contract by Market</div><canvas id="acqMarketChart"></canvas></div>
+    <div class="chart-box"><div class="chart-box-title">Monthly Close Volume</div><canvas id="acqTrendChart"></canvas></div>
+  </div>
+  <div class="chart-box" style="margin-bottom:20px"><div class="chart-box-title">Conversion Rates by Stage</div><div style="padding:4px 0">
+    <div class="conv-bar-wrap"><div class="conv-bar-header"><span class="conv-bar-label">Offer Request → Assessment</span><span class="conv-bar-val" style="color:var(--teal)">76%</span></div><div class="conv-bar-bg"><div class="conv-bar-fill" style="width:76%;background:var(--teal)"></div></div></div>
+    <div class="conv-bar-wrap"><div class="conv-bar-header"><span class="conv-bar-label">Assessment → Final Offer</span><span class="conv-bar-val" style="color:var(--amber)">48%</span></div><div class="conv-bar-bg"><div class="conv-bar-fill" style="width:48%;background:var(--amber)"></div></div></div>
+    <div class="conv-bar-wrap"><div class="conv-bar-header"><span class="conv-bar-label">Final Offer → In Contract</span><span class="conv-bar-val" style="color:var(--blue)">66%</span></div><div class="conv-bar-bg"><div class="conv-bar-fill" style="width:66%;background:var(--blue)"></div></div></div>
+    <div class="conv-bar-wrap"><div class="conv-bar-header"><span class="conv-bar-label">In Contract → Closed (90d)</span><span class="conv-bar-val" style="color:var(--od-green)">89%</span></div><div class="conv-bar-bg"><div class="conv-bar-fill" style="width:89%;background:var(--od-green)"></div></div></div>
+    <div class="conv-bar-wrap"><div class="conv-bar-header"><span class="conv-bar-label">Overall: Request → Closed</span><span class="conv-bar-val" style="color:var(--od-green-dark)">21%</span></div><div class="conv-bar-bg"><div class="conv-bar-fill" style="width:21%;background:var(--od-green-dark)"></div></div></div>
+  </div></div>
+  <div class="table-box"><div class="table-header"><div class="table-title">Acquisition Transaction Tracker</div><div class="table-actions"><button class="filter-chip active">All</button><button class="filter-chip">Cash</button><button class="filter-chip">Cash Plus</button><button class="filter-chip">In Contract</button></div></div>
+  <div class="table-scroll"><table><thead><tr><th>Address</th><th>Market</th><th>Type</th><th>Contract Date</th><th>COE</th><th>Offer Price</th><th>Status</th><th>MSRE Commission</th><th>CITY</th></tr></thead><tbody>
+    <tr><td class="addr">729 E Ivy Valley Dr</td><td><span class="market-chip m-ral">Raleigh</span></td><td><span class="type-badge type-cash">Cash</span></td><td>Feb 3</td><td>Mar 28</td><td>$420,500</td><td><span class="status s-contract"><span class="status-dot"></span>In Contract</span></td><td class="comm">$15,412</td><td><a class="city-link" href="#">↗ CITY</a></td></tr>
+    <tr><td class="addr">680 Atlanta Dr</td><td><span class="market-chip m-nas">Nashville</span></td><td><span class="type-badge type-cash">Cash</span></td><td>Feb 3</td><td>Mar 21</td><td>$341,200</td><td><span class="status s-contract"><span class="status-dot"></span>In Contract</span></td><td class="comm">$12,507</td><td><a class="city-link" href="#">↗ CITY</a></td></tr>
+    <tr><td class="addr">905 Cedar Dr</td><td><span class="market-chip m-orl">Orlando</span></td><td><span class="type-badge type-cp">Cash Plus</span></td><td>Feb 11</td><td>Mar 25</td><td>$184,000</td><td><span class="status s-pending"><span class="status-dot"></span>DV Complete</span></td><td class="comm">$7,134</td><td><a class="city-link" href="#">↗ CITY</a></td></tr>
+    <tr><td class="addr">6712 Lumberjack Ln</td><td><span class="market-chip m-orl">Orlando</span></td><td><span class="type-badge type-cash">Cash</span></td><td>Feb 19</td><td>Apr 2</td><td>$315,500</td><td><span class="status s-contract"><span class="status-dot"></span>In Contract</span></td><td class="comm">$11,563</td><td><a class="city-link" href="#">↗ CITY</a></td></tr>
+    <tr><td class="addr">3903 Indian Shoals Rd SE</td><td><span class="market-chip m-atl">Atlanta</span></td><td><span class="type-badge type-cp">Cash Plus</span></td><td>Mar 1</td><td>Apr 10</td><td>$298,000</td><td><span class="status s-contract"><span class="status-dot"></span>In Contract</span></td><td class="comm-pending">Pending elig.</td><td><a class="city-link" href="#">↗ CITY</a></td></tr>
+    <tr><td class="addr">106 Scoville St</td><td><span class="market-chip m-ral">Raleigh</span></td><td><span class="type-badge type-cash">Cash</span></td><td>Mar 5</td><td>Apr 15</td><td>$265,000</td><td><span class="status s-assessment"><span class="status-dot"></span>DV Scheduled</span></td><td class="comm">$9,720</td><td><a class="city-link" href="#">↗ CITY</a></td></tr>
+    <tr><td class="addr">258 Alcovy Walk Dr</td><td><span class="market-chip m-atl">Atlanta</span></td><td><span class="type-badge type-cash">Cash</span></td><td>Mar 8</td><td>Apr 18</td><td>$347,000</td><td><span class="status s-contract"><span class="status-dot"></span>In Contract</span></td><td class="comm">$12,719</td><td><a class="city-link" href="#">↗ CITY</a></td></tr>
+    <tr><td class="addr">400 Village Pkwy NE #142</td><td><span class="market-chip m-atl">Atlanta</span></td><td><span class="type-badge type-cp">Cash Plus</span></td><td>Mar 10</td><td>Apr 22</td><td>$389,000</td><td><span class="status s-contract"><span class="status-dot"></span>In Contract</span></td><td class="comm-pending">Pending elig.</td><td><a class="city-link" href="#">↗ CITY</a></td></tr>
+    <tr><td class="addr">5906 SW 112th Place Rd</td><td><span class="market-chip m-orl">Orlando</span></td><td><span class="type-badge type-cash">Cash</span></td><td>Jan 28</td><td>Closed</td><td>$226,200</td><td><span class="status s-closed"><span class="status-dot"></span>Closed</span></td><td class="comm">$8,654</td><td><a class="city-link" href="#">↗ CITY</a></td></tr>
+  </tbody></table></div></div>
+  <div class="table-box"><div class="table-header"><div class="table-title">Cash Plus — Commission Eligibility Tracker</div></div>
+  <table><thead><tr><th>Address</th><th>Market</th><th>Base (3.5%+$695)</th><th>+0.5% Eligible?</th><th>Reason if Ineligible</th><th>Initial Cash Pmt</th><th>Est. Total Comm.</th></tr></thead><tbody>
+    <tr><td class="addr">905 Cedar Dr</td><td><span class="market-chip m-orl">Orlando</span></td><td class="comm">✓ Yes</td><td class="comm">✓ Yes</td><td>—</td><td>$154,560</td><td class="comm">$7,134</td></tr>
+    <tr><td class="addr">3903 Indian Shoals Rd SE</td><td><span class="market-chip m-atl">Atlanta</span></td><td class="comm">✓ Yes</td><td style="color:var(--red);font-weight:700">✗ No</td><td>Listed within 30d under MSRE</td><td>$250,320</td><td class="comm-pending">$9,457</td></tr>
+    <tr><td class="addr">400 Village Pkwy NE</td><td><span class="market-chip m-atl">Atlanta</span></td><td class="comm">✓ Yes</td><td style="color:var(--amber);font-weight:700">? Pending</td><td>Verify in Wally</td><td>$326,760</td><td class="comm-pending">TBD</td></tr>
+  </tbody></table></div>
+</div>
+<div class="tab-panel" id="panel-alo">
+  <div class="section-header"><div class="section-title"><span class="tab-dot" style="background:var(--purple);width:12px;height:12px;border-radius:50%;display:inline-block;"></span>Agent Led Offers — MSRE Lead Performance<span class="section-badge" style="background:var(--purple-l);color:var(--purple);">ALO Program</span></div></div>
+  <div class="notes-box"><strong>How it works:</strong> MSRE agents (<code>alo@markspain.com</code>) submit offers on sellers’ behalf. MSRE earns <strong>0.71% of purchase price</strong> per closing. Two lead types: <strong>Organic</strong> (seller found MSRE) and <strong>OD Referred</strong> (OD sends seller to MSRE). Full funnel: Lead → Offer → Assessment → Final Offer → Contract → Closed.</div>
+  <div class="kpi-grid">
+    <div class="kpi-card purple"><div class="kpi-label">Leads Submitted (MTD)</div><div class="kpi-value" style="color:var(--purple)">34</div><div class="kpi-sub">Organic (28) + OD Referred (6)</div></div>
+    <div class="kpi-card teal"><div class="kpi-label">Assessments Done</div><div class="kpi-value" style="color:var(--teal)">24</div><div class="kpi-sub">71% of leads</div></div>
+    <div class="kpi-card amber"><div class="kpi-label">In Contract</div><div class="kpi-value" style="color:var(--amber)">14</div><div class="kpi-sub">41% lead → contract</div></div>
+    <div class="kpi-card green"><div class="kpi-label">ALO Fees Paid (MTD)</div><div class="kpi-value" style="color:var(--od-green)">$18.4K</div><div class="kpi-sub">6 closings · avg $3,070</div></div>
+  </div>
+  <div class="funnel-container"><div class="funnel-title">ALO Conversion Funnel — MTD</div><div class="funnel-steps">
+    <div class="funnel-step"><div class="funnel-step-inner"><div class="funnel-num">34</div><div class="funnel-label">Leads In</div><div class="funnel-pct">100%</div></div></div><div class="funnel-arrow">›</div>
+    <div class="funnel-step"><div class="funnel-step-inner"><div class="funnel-num">28</div><div class="funnel-label">Offer Requested</div><div class="funnel-pct">82%</div></div></div><div class="funnel-arrow">›</div>
+    <div class="funnel-step"><div class="funnel-step-inner"><div class="funnel-num">24</div><div class="funnel-label">Assessment</div><div class="funnel-pct">71%</div></div></div><div class="funnel-arrow">›</div>
+    <div class="funnel-step"><div class="funnel-step-inner"><div class="funnel-num">19</div><div class="funnel-label">Final Offer</div><div class="funnel-pct">56%</div></div></div><div class="funnel-arrow">›</div>
+    <div class="funnel-step"><div class="funnel-step-inner"><div class="funnel-num">14</div><div class="funnel-label">Contract</div><div class="funnel-pct" style="color:var(--amber)">41% ← key</div></div></div><div class="funnel-arrow">›</div>
+    <div class="funnel-step"><div class="funnel-step-inner"><div class="funnel-num">6</div><div class="funnel-label">Closed</div><div class="funnel-pct">18%</div></div></div>
+  </div></div>
+  <div class="three-col">
+    <div class="chart-box"><div class="chart-box-title">Organic vs OD-Referred</div><canvas id="aloLeadTypeChart"></canvas></div>
+    <div class="chart-box"><div class="chart-box-title">ALO Leads by Market</div><canvas id="aloMarketChart"></canvas></div>
+    <div class="chart-box"><div class="chart-box-title">Lead → Contract Rate (Monthly)</div><canvas id="aloConvTrendChart"></canvas></div>
+  </div>
+  <div class="chart-box" style="margin-bottom:20px"><div class="chart-box-title">Conversion Rates — Organic vs OD-Referred</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;padding:6px 0">
+    <div><div style="font-size:11px;font-weight:700;color:var(--purple);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px">Organic (28 MTD)</div>
+      <div class="conv-bar-wrap"><div class="conv-bar-header"><span class="conv-bar-label">Lead → Offer Request</span><span class="conv-bar-val" style="color:var(--teal)">86%</span></div><div class="conv-bar-bg"><div class="conv-bar-fill" style="width:86%;background:var(--teal)"></div></div></div>
+      <div class="conv-bar-wrap"><div class="conv-bar-header"><span class="conv-bar-label">Offer Request → Assessment</span><span class="conv-bar-val" style="color:var(--blue)">75%</span></div><div class="conv-bar-bg"><div class="conv-bar-fill" style="width:75%;background:var(--blue)"></div></div></div>
+      <div class="conv-bar-wrap"><div class="conv-bar-header"><span class="conv-bar-label">Assessment → Final Offer</span><span class="conv-bar-val" style="color:var(--amber)">72%</span></div><div class="conv-bar-bg"><div class="conv-bar-fill" style="width:72%;background:var(--amber)"></div></div></div>
+      <div class="conv-bar-wrap"><div class="conv-bar-header"><span class="conv-bar-label">Final Offer → Contract</span><span class="conv-bar-val" style="color:var(--od-green)">65%</span></div><div class="conv-bar-bg"><div class="conv-bar-fill" style="width:65%;background:var(--od-green)"></div></div></div>
+      <div class="conv-bar-wrap"><div class="conv-bar-header"><span class="conv-bar-label">Lead → Closed (end-to-end)</span><span class="conv-bar-val" style="color:var(--od-green-dark)">21%</span></div><div class="conv-bar-bg"><div class="conv-bar-fill" style="width:21%;background:var(--od-green-dark)"></div></div></div>
+    </div>
+    <div><div style="font-size:11px;font-weight:700;color:var(--amber);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px">OD-Referred (6 MTD)</div>
+      <div class="conv-bar-wrap"><div class="conv-bar-header"><span class="conv-bar-label">Lead → Offer Request</span><span class="conv-bar-val" style="color:var(--teal)">67%</span></div><div class="conv-bar-bg"><div class="conv-bar-fill" style="width:67%;background:var(--teal)"></div></div></div>
+      <div class="conv-bar-wrap"><div class="conv-bar-header"><span class="conv-bar-label">Offer Request → Assessment</span><span class="conv-bar-val" style="color:var(--blue)">75%</span></div><div class="conv-bar-bg"><div class="conv-bar-fill" style="width:75%;background:var(--blue)"></div></div></div>
+      <div class="conv-bar-wrap"><div class="conv-bar-header"><span class="conv-bar-label">Assessment → Final Offer</span><span class="conv-bar-val" style="color:var(--amber)">80%</span></div><div class="conv-bar-bg"><div class="conv-bar-fill" style="width:80%;background:var(--amber)"></div></div></div>
+      <div class="conv-bar-wrap"><div class="conv-bar-header"><span class="conv-bar-label">Final Offer → Contract</span><span class="conv-bar-val" style="color:var(--od-green)">75%</span></div><div class="conv-bar-bg"><div class="conv-bar-fill" style="width:75%;background:var(--od-green)"></div></div></div>
+      <div class="conv-bar-wrap"><div class="conv-bar-header"><span class="conv-bar-label">Lead → Closed (end-to-end)</span><span class="conv-bar-val" style="color:var(--od-green-dark)">33%</span></div><div class="conv-bar-bg"><div class="conv-bar-fill" style="width:33%;background:var(--od-green-dark)"></div></div></div>
+    </div>
+  </div></div>
+  <div class="table-box"><div class="table-header"><div class="table-title">ALO Pipeline — Lead → Contract Tracker</div><div class="table-actions"><button class="filter-chip active">All</button><button class="filter-chip">In Contract</button><button class="filter-chip">Closed</button><button class="filter-chip">Walked</button></div></div>
+  <div class="table-scroll"><table><thead><tr><th>Address</th><th>Market</th><th>Lead Type</th><th>Lead Date</th><th>Offer Price</th><th>Contract Date</th><th>COE</th><th>Status</th><th>ALO Fee</th><th>Days</th></tr></thead><tbody>
+    <tr><td class="addr">729 E Ivy Valley Dr</td><td><span class="market-chip m-ral">Raleigh</span></td><td><span class="type-badge type-alo">Organic</span></td><td>Jan 20</td><td>$420,500</td><td>Feb 3</td><td>Mar 28</td><td><span class="status s-contract"><span class="status-dot"></span>In Contract</span></td><td class="comm">$2,986</td><td>52d</td></tr>
+    <tr><td class="addr">680 Atlanta Dr</td><td><span class="market-chip m-nas">Nashville</span></td><td><span class="type-badge type-alo">Organic</span></td><td>Jan 22</td><td>$341,200</td><td>Feb 3</td><td>Mar 21</td><td><span class="status s-contract"><span class="status-dot"></span>In Contract</span></td><td class="comm">$2,423</td><td>50d</td></tr>
+    <tr><td class="addr">905 Cedar Dr</td><td><span class="market-chip m-orl">Orlando</span></td><td><span class="type-badge type-alo">Organic</span></td><td>Jan 28</td><td>$184,000</td><td>Feb 11</td><td>Mar 25</td><td><span class="status s-pending"><span class="status-dot"></span>DV Complete</span></td><td class="comm">$1,307</td><td>44d</td></tr>
+    <tr><td class="addr">6712 Lumberjack Ln</td><td><span class="market-chip m-orl">Orlando</span></td><td><span class="type-badge type-alo">Organic</span></td><td>Feb 5</td><td>$315,500</td><td>Feb 19</td><td>Apr 2</td><td><span class="status s-contract"><span class="status-dot"></span>In Contract</span></td><td class="comm">$2,240</td><td>36d</td></tr>
+    <tr><td class="addr">3903 Indian Shoals Rd SE</td><td><span class="market-chip m-atl">Atlanta</span></td><td><span class="type-badge type-ext">OD Referred</span></td><td>Feb 15</td><td>$298,000</td><td>Mar 1</td><td>Apr 10</td><td><span class="status s-contract"><span class="status-dot"></span>In Contract</span></td><td class="comm">$2,116</td><td>26d</td></tr>
+    <tr><td class="addr">3830 Enchantment Ln</td><td><span class="market-chip m-orl">Orlando</span></td><td><span class="type-badge type-alo">Organic</span></td><td>Feb 10</td><td>N/A</td><td>—</td><td>—</td><td><span class="status s-walked"><span class="status-dot"></span>Walked</span></td><td style="color:var(--text-3)">$0</td><td>—</td></tr>
+    <tr><td class="addr">258 Alcovy Walk Dr</td><td><span class="market-chip m-atl">Atlanta</span></td><td><span class="type-badge type-ext">OD Referred</span></td><td>Feb 25</td><td>$347,000</td><td>Mar 8</td><td>Apr 18</td><td><span class="status s-contract"><span class="status-dot"></span>In Contract</span></td><td class="comm">$2,464</td><td>16d</td></tr>
+    <tr><td class="addr">5906 SW 112th Place Rd</td><td><span class="market-chip m-orl">Orlando</span></td><td><span class="type-badge type-alo">Organic</span></td><td>Jan 10</td><td>$226,200</td><td>Jan 18</td><td>Feb 28</td><td><span class="status s-closed"><span class="status-dot"></span>Closed</span></td><td class="comm">$1,606</td><td>49d</td></tr>
+    <tr><td class="addr">400 Village Pkwy NE #142</td><td><span class="market-chip m-atl">Atlanta</span></td><td><span class="type-badge type-ext">OD Referred</span></td><td>Feb 28</td><td>$389,000</td><td>Mar 10</td><td>Apr 22</td><td><span class="status s-contract"><span class="status-dot"></span>In Contract</span></td><td class="comm">$2,762</td><td>13d</td></tr>
+  </tbody></table></div></div>
+  <div class="two-col">
+    <div class="chart-box"><div class="chart-box-title">ALO Fees — YTD by Month</div><canvas id="aloFeeChart"></canvas></div>
+    <div class="table-box" style="margin-bottom:0"><div class="table-header"><div class="table-title">ALO Fee Summary by Market (YTD)</div></div>
+    <table><thead><tr><th>Market</th><th>Leads</th><th>Contracts</th><th>Closed</th><th>Conv.</th><th>Fees</th></tr></thead><tbody>
+      <tr><td><span class="market-chip m-atl">Atlanta</span></td><td>12</td><td>7</td><td>3</td><td style="color:var(--od-green);font-weight:700">58%</td><td class="comm">$7,342</td></tr>
+      <tr><td><span class="market-chip m-orl">Orlando</span></td><td>10</td><td>5</td><td>4</td><td style="color:var(--od-green);font-weight:700">50%</td><td class="comm">$6,741</td></tr>
+      <tr><td><span class="market-chip m-ral">Raleigh</span></td><td>6</td><td>3</td><td>2</td><td style="color:var(--amber);font-weight:700">50%</td><td class="comm">$4,868</td></tr>
+      <tr><td><span class="market-chip m-nas">Nashville</span></td><td>4</td><td>2</td><td>1</td><td style="color:var(--amber);font-weight:700">50%</td><td class="comm">$2,423</td></tr>
+      <tr><td><span class="market-chip m-clt">Charlotte</span></td><td>2</td><td>0</td><td>0</td><td style="color:var(--red);font-weight:700">0%</td><td style="color:var(--text-3)">$0</td></tr>
+      <tr style="background:var(--od-green-pale)"><td style="font-weight:700">TOTAL</td><td style="font-weight:700">34</td><td style="font-weight:700">17</td><td style="font-weight:700">10</td><td style="color:var(--od-green-dark);font-weight:800">50%</td><td class="comm" style="font-size:15px;font-weight:800">$21,374</td></tr>
+    </tbody></table></div>
+  </div>
+</div>
+</div>
+<script>
+  document.getElementById('lastUpdated').textContent=new Date().toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  function switchTab(tab,el){document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));document.getElementById('panel-'+tab).classList.add('active');el.classList.add('active');}
+  Chart.defaults.color='#6b7280';Chart.defaults.font.family="-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif";Chart.defaults.font.size=12;Chart.defaults.plugins.legend.labels.boxWidth=11;Chart.defaults.plugins.legend.labels.padding=14;
+  const grid='#f3f4f6',G='#00a550',GD='#007a3d',B='#2563eb',A='#d97706',P='#7c3aed',T='#0d9488',R='#dc2626';
+  const mkO=(s=false)=>({responsive:true,plugins:{legend:{position:'bottom'}},scales:{x:{stacked:s,grid:{display:false}},y:{stacked:s,grid:{color:grid},beginAtZero:true,ticks:{stepSize:1}}}});
+  new Chart(document.getElementById('extMarketChart'),{type:'bar',data:{labels:['Atlanta','Nashville','Charlotte','Raleigh','Orlando','Greensboro'],datasets:[{data:[2,3,2,2,2,1],backgroundColor:[B+'33',G+'33',T+'33',P+'33',A+'33',R+'33'],borderColor:[B,G,T,P,A,R],borderWidth:1.5,borderRadius:6}]},options:{...mkO(),plugins:{legend:{display:false}}}});
+  new Chart(document.getElementById('extDtpChart'),{type:'bar',data:{labels:['Atlanta','Nashville','Charlotte','Raleigh','Orlando','Greensboro'],datasets:[{label:'Avg DTP',data:[14,19,22,16,21,18],backgroundColor:B+'33',borderColor:B,borderWidth:1.5,borderRadius:6},{label:'Target (21d)',data:[21,21,21,21,21,21],type:'line',borderColor:R,borderDash:[5,4],borderWidth:2,pointRadius:0,fill:false}]},options:{...mkO(),plugins:{legend:{position:'bottom'}}}});
+  new Chart(document.getElementById('extDtpTrendChart'),{type:'line',data:{labels:['Oct','Nov','Dec','Jan','Feb','Mar'],datasets:[{label:'Avg Days to Pending',data:[28,25,24,22,21,18],borderColor:B,backgroundColor:B+'18',fill:true,tension:0.4,pointBackgroundColor:B,pointRadius:4}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{grid:{color:grid}},x:{grid:{display:false}}}}});
+  new Chart(document.getElementById('acqMixChart'),{type:'doughnut',data:{labels:['Cash','Cash Plus'],datasets:[{data:[18,7],backgroundColor:[G+'cc',B+'cc'],borderColor:[G,B],borderWidth:2,hoverOffset:8}]},options:{responsive:true,cutout:'65%',plugins:{legend:{position:'bottom'}}}});
+  new Chart(document.getElementById('acqMarketChart'),{type:'bar',data:{labels:['Atlanta','Orlando','Raleigh','Nashville','Charlotte'],datasets:[{label:'Cash',data:[5,4,4,3,2],backgroundColor:G+'cc',borderRadius:4},{label:'Cash Plus',data:[2,2,1,1,1],backgroundColor:B+'cc',borderRadius:4}]},options:mkO(true)});
+  new Chart(document.getElementById('acqTrendChart'),{type:'line',data:{labels:['Oct','Nov','Dec','Jan','Feb','Mar'],datasets:[{label:'Cash',data:[3,4,5,6,7,6],borderColor:G,backgroundColor:G+'18',fill:true,tension:0.4,pointBackgroundColor:G,pointRadius:4},{label:'Cash Plus',data:[1,1,2,2,3,2],borderColor:B,backgroundColor:B+'18',fill:true,tension:0.4,pointBackgroundColor:B,pointRadius:4}]},options:{responsive:true,plugins:{legend:{position:'bottom'}},scales:{y:{grid:{color:grid},beginAtZero:true},x:{grid:{display:false}}}}});
+  new Chart(document.getElementById('aloLeadTypeChart'),{type:'doughnut',data:{labels:['Organic','OD Referred'],datasets:[{data:[28,6],backgroundColor:[P+'cc',A+'cc'],borderColor:[P,A],borderWidth:2,hoverOffset:8}]},options:{responsive:true,cutout:'65%',plugins:{legend:{position:'bottom'}}}});
+  new Chart(document.getElementById('aloMarketChart'),{type:'bar',data:{labels:['Atlanta','Orlando','Raleigh','Nashville','Charlotte'],datasets:[{label:'Organic',data:[8,8,5,4,3],backgroundColor:P+'cc',borderRadius:4},{label:'OD Referred',data:[4,2,1,0,0],backgroundColor:A+'cc',borderRadius:4}]},options:mkO(true)});
+  new Chart(document.getElementById('aloConvTrendChart'),{type:'line',data:{labels:['Oct','Nov','Dec','Jan','Feb','Mar'],datasets:[{label:'Lead→Contract %',data:[28,31,33,37,35,41],borderColor:P,backgroundColor:P+'18',fill:true,tension:0.4,pointBackgroundColor:P,pointRadius:4},{label:'Lead→Closed %',data:[12,15,16,18,17,18],borderColor:G,backgroundColor:G+'18',fill:true,tension:0.4,pointBackgroundColor:G,pointRadius:4}]},options:{responsive:true,plugins:{legend:{position:'bottom'}},scales:{y:{grid:{color:grid},beginAtZero:true,ticks:{callback:v=>v+'%'}},x:{grid:{display:false}}}}});
+  new Chart(document.getElementById('aloFeeChart'),{type:'bar',data:{labels:['Oct','Nov','Dec','Jan','Feb','Mar'],datasets:[{label:'ALO Fees',data:[3200,4100,4800,5200,4900,18400],backgroundColor:P+'44',borderColor:P,borderWidth:1.5,borderRadius:6}]},options:{responsive:true,plugins:{legend:{display:false}},scales:{y:{grid:{color:grid},beginAtZero:true,ticks:{callback:v=>'$'+(v/1000).toFixed(0)+'K'}},x:{grid:{display:false}}}}});
+</script>
+</body>
+</html>
